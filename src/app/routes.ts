@@ -6,6 +6,7 @@ import { MenuManagement } from './pages/MenuManagement';
 import { InventoryManagement } from './pages/InventoryManagement';
 import { RevenueManagement } from './pages/RevenueManagement';
 import { TaxManagement } from './pages/TaxManagement';
+import { MenuQR } from "./pages/QRMenu";
 
 export const router = createBrowserRouter([
   {
@@ -18,6 +19,7 @@ export const router = createBrowserRouter([
       { path: 'inventory', Component: InventoryManagement },
       { path: 'revenue', Component: RevenueManagement },
       { path: 'tax', Component: TaxManagement },
+      { path: 'qrmenu', Component: MenuQR },
     ],
   },
 ]);

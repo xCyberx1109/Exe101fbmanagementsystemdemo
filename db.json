@@ -1,0 +1,19 @@
+{
+  "orders": [
+    {
+      "table": "1",
+      "items": [
+        {
+          "itemId": "1",
+          "name": "Phở Bò",
+          "price": 65000,
+          "quantity": 1
+        }
+      ],
+      "total": 65000,
+      "status": "pending",
+      "time": "2026-03-14T05:57:16.574Z",
+      "id": 1
+    }
+  ]
+}

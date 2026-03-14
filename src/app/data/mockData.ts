@@ -37,6 +37,13 @@ export interface TaxRecord {
   status: 'paid' | 'pending' | 'overdue';
 }
 
+export interface FoodOrderStat {
+  id: string;
+  menuItemId: string;
+  quantity: number;
+}
+
+
 export const menuItems: MenuItem[] = [
   { id: '1', name: 'Phở Bò', category: 'Món chính', price: 65000, cost: 35000, description: 'Phở bò truyền thống Hà Nội', available: true },
   { id: '2', name: 'Bún Chả', category: 'Món chính', price: 55000, cost: 30000, description: 'Bún chả Hà Nội đặc sản', available: true },
@@ -80,4 +87,15 @@ export const taxRecords: TaxRecord[] = [
   { id: '1', month: '2026-01', revenue: 125000000, taxRate: 10, taxAmount: 12500000, status: 'paid' },
   { id: '2', month: '2026-02', revenue: 135000000, taxRate: 10, taxAmount: 13500000, status: 'paid' },
   { id: '3', month: '2026-03', revenue: 68400000, taxRate: 10, taxAmount: 6840000, status: 'pending' },
+];
+
+export const foodOrderStats: FoodOrderStat[] = [
+  { id: '1', menuItemId: '1', quantity: 320 }, // Phở bò
+  { id: '2', menuItemId: '2', quantity: 280 }, // Bún chả
+  { id: '3', menuItemId: '3', quantity: 210 }, // Cơm tấm
+  { id: '4', menuItemId: '4', quantity: 150 }, // Bánh mì
+  { id: '5', menuItemId: '5', quantity: 1000 }, // Cà phê đen
+  { id: '6', menuItemId: '6', quantity: 240 }, // Cà phê sữa
+  { id: '7', menuItemId: '7', quantity: 170 }, // Trà chanh
+  { id: '8', menuItemId: '8', quantity: 130 }, // Nem rán
 ];

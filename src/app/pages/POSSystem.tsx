@@ -1,63 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote, Printer, X, Smartphone, Clock } from 'lucide-react';
 import { menuItems, MenuItem } from '../data/mockData';
+import { QRCodeCanvas } from "qrcode.react";
+
+const API_URL = `${import.meta.env.VITE_API_URL}/orders`;
 
 interface OrderItem extends MenuItem {
   quantity: number;
   orderedAt?: string;
-  source?: 'qr' | 'pos';
 }
 
 interface Table {
   id: string;
   number: number;
-  status: 'available' | 'occupied' | 'reserved';
-  customerCount?: number;
+  status: 'available' | 'occupied';
   qrOrders?: OrderItem[];
 }
 
-// Mock data với đơn hàng từ QR
-const initialTables: Table[] = [
-  { id: '1', number: 1, status: 'available' },
-  { 
-    id: '2', 
-    number: 2, 
-    status: 'occupied', 
-    customerCount: 4,
-    qrOrders: [
-      { ...menuItems[0], quantity: 2, orderedAt: '10:30', source: 'qr' },
-      { ...menuItems[4], quantity: 4, orderedAt: '10:32', source: 'qr' },
-    ]
-  },
-  { id: '3', number: 3, status: 'available' },
-  { 
-    id: '4', 
-    number: 4, 
-    status: 'reserved', 
-    customerCount: 2,
-    qrOrders: [
-      { ...menuItems[1], quantity: 2, orderedAt: '10:45', source: 'qr' },
-      { ...menuItems[6], quantity: 2, orderedAt: '10:46', source: 'qr' },
-    ]
-  },
-  { id: '5', number: 5, status: 'available' },
-  { 
-    id: '6', 
-    number: 6, 
-    status: 'occupied', 
-    customerCount: 3,
-    qrOrders: [
-      { ...menuItems[2], quantity: 3, orderedAt: '11:00', source: 'qr' },
-      { ...menuItems[5], quantity: 3, orderedAt: '11:02', source: 'qr' },
-      { ...menuItems[7], quantity: 1, orderedAt: '11:05', source: 'qr' },
-    ]
-  },
-  { id: '7', number: 7, status: 'available' },
-  { id: '8', number: 8, status: 'available' },
-];
 
 export function POSSystem() {
-  const [tables, setTables] = useState<Table[]>(initialTables);
+  const [tables, setTables] = useState<Table[]>([]);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -72,6 +34,67 @@ export function POSSystem() {
     return matchesCategory && matchesSearch && item.available;
   });
 
+  useEffect(() => {
+
+    const initTables: Table[] = Array.from({ length: 8 }, (_, i) => ({
+      id: `table-${i + 1}`,
+      number: i + 1,
+      status: "available",
+      qrOrders: []
+    }));
+
+    setTables(initTables);
+
+  }, []);
+
+  useEffect(() => {
+
+    const loadOrders = async () => {
+
+      try {
+
+        const res = await fetch(API_URL);
+        const data = await res.json();
+
+        setTables(prevTables =>
+          prevTables.map(table => {
+
+            const orders = data
+              .filter((o: any) => Number(o.table) === table.number)
+              .flatMap((o: any) =>
+                o.items.map((item: any) => ({
+                  ...item,
+                  orderedAt: new Date(o.time).toLocaleTimeString().slice(0, 5)
+                }))
+              );
+
+            return {
+              ...table,
+              status: orders.length ? "occupied" : "available",
+              qrOrders: orders
+            };
+
+          })
+        );
+
+      } catch (err) {
+
+        console.log("Load order error", err);
+
+      }
+
+    };
+
+    loadOrders();
+
+    const interval = setInterval(loadOrders, 2000);
+
+    return () => clearInterval(interval);
+
+  }, []);
+
+
+
   // Load QR orders when table is selected
   const handleTableSelect = (table: Table) => {
     setSelectedTable(table);
@@ -83,52 +106,144 @@ export function POSSystem() {
   };
 
   const addToOrder = (item: MenuItem) => {
-    const existingItem = orderItems.find(orderItem => orderItem.id === item.id);
+    if (!selectedTable) return;
+
+    const existingItem = orderItems.find(i => i.id === item.id);
+
     if (existingItem) {
-      setOrderItems(orderItems.map(orderItem =>
-        orderItem.id === item.id
-          ? { ...orderItem, quantity: orderItem.quantity + 1 }
-          : orderItem
+      setOrderItems(orderItems.map(i =>
+        i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
       ));
     } else {
-      setOrderItems([...orderItems, { ...item, quantity: 1, source: 'pos' }]);
+      setOrderItems([...orderItems, { ...item, quantity: 1 }]);
     }
   };
 
+
+
   const updateQuantity = (id: string, delta: number) => {
-    setOrderItems(orderItems.map(item => {
-      if (item.id === id) {
-        const newQuantity = item.quantity + delta;
-        return newQuantity > 0 ? { ...item, quantity: newQuantity } : item;
-      }
-      return item;
-    }).filter(item => item.quantity > 0));
+    if (!selectedTable) return;
+
+    const updatedOrder = orderItems
+      .map(item => {
+        if (item.id === id) {
+          const newQuantity = item.quantity + delta;
+          return newQuantity > 0 ? { ...item, quantity: newQuantity } : item;
+        }
+        return item;
+      })
+      .filter(item => item.quantity > 0);
+
+    setOrderItems(updatedOrder);
+
+    setTables(prev =>
+      prev.map(t =>
+        t.id === selectedTable.id
+          ? { ...t, qrOrders: updatedOrder }
+          : t
+      )
+    );
   };
 
+
   const removeItem = (id: string) => {
-    setOrderItems(orderItems.filter(item => item.id !== id));
+    if (!selectedTable) return;
+
+    const updatedOrder = orderItems.filter(item => item.id !== id);
+
+    setOrderItems(updatedOrder);
+
+    setTables(prev =>
+      prev.map(t =>
+        t.id === selectedTable.id
+          ? { ...t, qrOrders: updatedOrder }
+          : t
+      )
+    );
   };
+
 
   const calculateTotal = () => {
     return orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
-  const handlePayment = (method: 'cash' | 'card') => {
-    alert(`Đã thanh toán ${(calculateTotal() * 1.1).toLocaleString()} ₫ bằng ${method === 'cash' ? 'Tiền mặt' : 'Thẻ'}`);
-    
-    // Update table status to available and clear orders
-    if (selectedTable) {
-      setTables(tables.map(t => 
-        t.id === selectedTable.id 
-          ? { ...t, status: 'available', qrOrders: undefined, customerCount: undefined }
-          : t
-      ));
+  const handleOrder = async () => {
+
+    if (!selectedTable || orderItems.length === 0) return;
+
+    try {
+
+      await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          table: selectedTable.number,
+          items: orderItems,
+          time: new Date().toISOString()
+        })
+      });
+
+      alert("Đã gửi order xuống bếp");
+
+      setSelectedTable(null);
+      setOrderItems([]);
+
+    } catch (err) {
+
+      console.log("Send order error", err);
+      alert("Không gửi được order");
+
     }
-    
-    setOrderItems([]);
-    setShowPayment(false);
-    setSelectedTable(null);
+
   };
+
+  const handlePayment = async (method: 'cash' | 'card') => {
+
+    if (!selectedTable) return;
+
+    try {
+
+      // lấy tất cả orders
+      const res = await fetch(API_URL);
+      const orders = await res.json();
+
+      // lọc order của bàn đang thanh toán
+      const tableOrders = orders.filter((o: any) => Number(o.table) === selectedTable.number);
+
+      // xóa từng order
+      await Promise.all(
+        tableOrders.map((o: any) =>
+          fetch(`${API_URL}/${o.id}`, {
+            method: "DELETE"
+          })
+        )
+      );
+
+      alert(`Đã thanh toán ${(calculateTotal() * 1.1).toLocaleString()} ₫ bằng ${method === 'cash' ? 'Tiền mặt' : 'Thẻ'}`);
+
+      // reset UI
+      setTables(prev =>
+        prev.map(t =>
+          t.id === selectedTable.id
+            ? { ...t, status: 'available', qrOrders: [] }
+            : t
+        )
+      );
+
+      setOrderItems([]);
+      setShowPayment(false);
+      setSelectedTable(null);
+
+    } catch (err) {
+
+      console.log("Payment error", err);
+      alert("Thanh toán lỗi");
+
+    }
+  };
+
 
   const getTableStatusColor = (status: Table['status']) => {
     switch (status) {
@@ -136,8 +251,8 @@ export function POSSystem() {
         return 'bg-green-100 text-green-800 border-green-300';
       case 'occupied':
         return 'bg-red-100 text-red-800 border-red-300';
-      case 'reserved':
-        return 'bg-orange-100 text-orange-800 border-orange-300';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
@@ -147,8 +262,8 @@ export function POSSystem() {
         return 'Trống';
       case 'occupied':
         return 'Có khách';
-      case 'reserved':
-        return 'Đã đặt';
+      default:
+        return '';
     }
   };
 
@@ -211,20 +326,18 @@ export function POSSystem() {
                         <div className="text-center">
                           <div className="text-xl font-bold">Bàn {table.number}</div>
                           <div className="text-xs mt-1">{getTableStatusText(table.status)}</div>
-                          {table.customerCount && (
-                            <div className="text-xs mt-1">{table.customerCount} người</div>
-                          )}
                           {table.qrOrders && (
                             <>
-                              <div className="flex items-center justify-center gap-1 text-xs mt-2 bg-white bg-opacity-50 rounded px-2 py-1">
-                                <Smartphone className="w-3 h-3" />
-                                <span>QR Order</span>
-                              </div>
                               <div className="text-xs font-semibold mt-1">
                                 {tableTotal.toLocaleString()} ₫
                               </div>
                             </>
                           )}
+                        </div>
+                        <div className='flex justify-center mt-3'>
+                          <QRCodeCanvas
+                            value={`${import.meta.env.VITE_FRONTEND_URL}/qrmenu?table=${table.number}`}
+                          />
                         </div>
                       </button>
                     );
@@ -232,61 +345,7 @@ export function POSSystem() {
                 </div>
               </div>
 
-              {/* Tables with QR Orders Overview */}
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Đơn hàng từ QR Code</h2>
-                {tables.filter(t => t.qrOrders && t.qrOrders.length > 0).length === 0 ? (
-                  <div className="text-center py-8 text-gray-400">
-                    <Smartphone className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>Chưa có đơn hàng nào từ QR</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {tables.filter(t => t.qrOrders && t.qrOrders.length > 0).map((table) => (
-                      <div key={table.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold ${getTableStatusColor(table.status)}`}>
-                              {table.number}
-                            </span>
-                            <div>
-                              <div className="font-semibold text-gray-900">Bàn {table.number}</div>
-                              <div className="text-xs text-gray-500 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                Đặt lúc {table.qrOrders?.[0]?.orderedAt}
-                              </div>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleTableSelect(table)}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                          >
-                            Xử lý
-                          </button>
-                        </div>
-                        <div className="space-y-2">
-                          {table.qrOrders?.map((item, idx) => (
-                            <div key={`${table.id}-${item.id}-${idx}`} className="flex justify-between text-sm bg-gray-50 rounded p-2">
-                              <span className="text-gray-700">
-                                {item.quantity}x {item.name}
-                              </span>
-                              <span className="font-medium text-gray-900">
-                                {(item.price * item.quantity).toLocaleString()} ₫
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-gray-200 flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-600">Tổng cộng:</span>
-                          <span className="text-lg font-bold text-blue-600">
-                            {getTableTotal(table).toLocaleString()} ₫
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+
             </>
           )}
 
@@ -300,11 +359,10 @@ export function POSSystem() {
                     <button
                       key={category}
                       onClick={() => setSelectedCategory(category)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        selectedCategory === category
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selectedCategory === category
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
                     >
                       {category === 'all' ? 'Tất cả' : category}
                     </button>
@@ -341,7 +399,7 @@ export function POSSystem() {
 
         {/* Right Side - Order Summary */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg border border-gray-200 p-4 sticky top-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 sticky top-4 h-[650px] flex flex-col">
             <div className="flex items-center gap-2 mb-4">
               <ShoppingCart className="w-5 h-5 text-gray-600" />
               <h2 className="text-lg font-semibold text-gray-900">Đơn hàng</h2>
@@ -362,7 +420,10 @@ export function POSSystem() {
                     <div key={item.id} className="flex items-start gap-2 pb-3 border-b border-gray-100">
                       <div className="flex-1">
                         <div className="font-medium text-gray-900">{item.name}</div>
-                        <div className="text-sm text-gray-500">{item.price.toLocaleString()} ₫</div>
+
+                        <div className="text-sm text-gray-500 mt-1">
+                          {item.price.toLocaleString()} ₫
+                        </div>
                       </div>
                       <div className="flex items-center gap-1">
                         <button
@@ -405,6 +466,21 @@ export function POSSystem() {
                 </div>
 
                 <div className="mt-4 space-y-2">
+
+                  <button
+                    onClick={handleOrder}
+                    className="w-full py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <ShoppingCart className="w-5 h-5" />
+                    Gửi Order
+                  </button>
+                  <button
+                    onClick={() => alert("In hóa đơn tạm")}
+                    className="w-full py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Printer className="w-4 h-4" />
+                    In tạm
+                  </button>
                   <button
                     onClick={() => setShowPayment(true)}
                     className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
@@ -412,13 +488,7 @@ export function POSSystem() {
                     <CreditCard className="w-5 h-5" />
                     Thanh toán
                   </button>
-                  <button
-                    onClick={() => alert('In hóa đơn tạm')}
-                    className="w-full py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Printer className="w-4 h-4" />
-                    In tạm
-                  </button>
+
                 </div>
               </>
             )}
@@ -431,7 +501,7 @@ export function POSSystem() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Thanh toán</h2>
-            
+
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
               <div className="flex justify-between mb-2">
                 <span className="text-gray-600">Tổng tiền:</span>

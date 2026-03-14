@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
-import { menuItems as initialMenuItems, MenuItem } from '../data/mockData';
+import { menuItems as initialMenuItems, MenuItem, foodOrderStats } from '../data/mockData';
 
 export function MenuManagement() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenuItems);
@@ -19,12 +19,24 @@ export function MenuManagement() {
 
   const categories = ['all', 'Món chính', 'Món phụ', 'Đồ uống'];
 
-  const filteredItems = menuItems.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const orderMap = foodOrderStats.reduce((map, item) => {
+    map[item.menuItemId] = item.quantity;
+    return map;
+  }, {} as Record<string, number>);
+
+  const filteredItems = menuItems
+    .filter(item => {
+      const matchesSearch =
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesCategory =
+        selectedCategory === 'all' || item.category === selectedCategory;
+
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => (orderMap[b.id] || 0) - (orderMap[a.id] || 0));
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,11 +126,10 @@ export function MenuManagement() {
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedCategory === category
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selectedCategory === category
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
               >
                 {category === 'all' ? 'Tất cả' : category}
               </button>
@@ -164,11 +175,10 @@ export function MenuManagement() {
                     <td className="px-6 py-4">
                       <button
                         onClick={() => handleToggleAvailability(item.id)}
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          item.available
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.available
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                          }`}
                       >
                         {item.available ? 'Khả dụng' : 'Ngừng bán'}
                       </button>

@@ -1,6 +1,6 @@
 import { DollarSign, Package, UtensilsCrossed, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router';
-import { menuItems, inventoryItems, revenueRecords } from '../data/mockData';
+import { menuItems, inventoryItems, revenueRecords, foodOrderStats } from '../data/mockData';
 
 export function Dashboard() {
   // Calculate stats
@@ -44,6 +44,14 @@ export function Dashboard() {
       link: '/inventory',
     },
   ];
+  const orderMap = foodOrderStats.reduce((map, item) => {
+    map[item.menuItemId] = item.quantity;
+    return map;
+  }, {} as Record<string, number>);
+  const topMenuItems = [...menuItems]
+    .sort((a, b) => (orderMap[b.id] || 0) - (orderMap[a.id] || 0))
+    .slice(0, 5);
+
 
   return (
     <div className="space-y-6">
@@ -110,7 +118,7 @@ export function Dashboard() {
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Menu phổ biến</h2>
           <div className="space-y-3">
-            {menuItems.slice(0, 5).map((item, index) => (
+            {topMenuItems.map((item, index) => (
               <div key={item.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-sm font-medium text-gray-700">

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, DollarSign, ShoppingCart, Percent } from 'lucide-react';
+import { TrendingUp, DollarSign, ShoppingCart, Percent, Utensils } from 'lucide-react';
 import { revenueRecords } from '../data/mockData';
+import { foodOrderStats, menuItems } from '../data/mockData';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
 
@@ -71,6 +72,18 @@ export function RevenueManagement() {
     },
   ];
 
+  const topFoods = foodOrderStats
+    .map(stat => {
+      const food = menuItems.find(m => m.id === stat.menuItemId);
+      return {
+        name: food?.name,
+        category: food?.category,
+        price: food?.price,
+        quantity: stat.quantity
+      };
+    })
+    .sort((a, b) => b.quantity - a.quantity);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -83,11 +96,10 @@ export function RevenueManagement() {
             <button
               key={range}
               onClick={() => setTimeRange(range)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                timeRange === range
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${timeRange === range
+                ? 'bg-blue-600 text-white'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
             >
               {range === '7days' ? '7 ngày' : range === '14days' ? '14 ngày' : '30 ngày'}
             </button>
@@ -177,6 +189,53 @@ export function RevenueManagement() {
         </div>
       </div>
 
+      {/* Top Selling Foods */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Danh sách món bán chạy</h2>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên món</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Danh mục</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Giá</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Số lượt bán</th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-gray-200">
+              {topFoods.map((food, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 font-semibold text-gray-700">
+                    {index + 1}
+                  </td>
+
+                  <td className="px-6 py-4 font-medium text-gray-900">
+                    {food.name}
+                  </td>
+
+                  <td className="px-6 py-4 text-gray-600">
+                    {food.category}
+                  </td>
+
+                  <td className="px-6 py-4 text-green-600 font-semibold">
+                    {food.price?.toLocaleString()} ₫
+                  </td>
+
+                  <td className="px-6 py-4 text-blue-600 font-bold">
+                    {food.quantity}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Detailed Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -202,11 +261,11 @@ export function RevenueManagement() {
                 return (
                   <tr key={record.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {new Date(record.date).toLocaleDateString('vi-VN', { 
-                        weekday: 'short', 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
+                      {new Date(record.date).toLocaleDateString('vi-VN', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
                       })}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{record.orderCount}</td>
@@ -215,11 +274,10 @@ export function RevenueManagement() {
                     <td className="px-6 py-4 text-sm font-semibold text-blue-600">{record.profit.toLocaleString()} ₫</td>
                     <td className="px-6 py-4 text-sm text-gray-900">{avgOrder.toLocaleString()} ₫</td>
                     <td className="px-6 py-4 text-sm">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        margin >= 50 ? 'bg-green-100 text-green-800' : 
-                        margin >= 40 ? 'bg-blue-100 text-blue-800' : 
-                        'bg-orange-100 text-orange-800'
-                      }`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${margin >= 50 ? 'bg-green-100 text-green-800' :
+                        margin >= 40 ? 'bg-blue-100 text-blue-800' :
+                          'bg-orange-100 text-orange-800'
+                        }`}>
                         {margin.toFixed(1)}%
                       </span>
                     </td>
