@@ -189,53 +189,6 @@ export function RevenueManagement() {
         </div>
       </div>
 
-      {/* Top Selling Foods */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Danh sách món bán chạy</h2>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên món</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Danh mục</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Giá</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Số lượt bán</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-gray-200">
-              {topFoods.map((food, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 font-semibold text-gray-700">
-                    {index + 1}
-                  </td>
-
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    {food.name}
-                  </td>
-
-                  <td className="px-6 py-4 text-gray-600">
-                    {food.category}
-                  </td>
-
-                  <td className="px-6 py-4 text-green-600 font-semibold">
-                    {food.price?.toLocaleString()} ₫
-                  </td>
-
-                  <td className="px-6 py-4 text-blue-600 font-bold">
-                    {food.quantity}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       {/* Detailed Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
